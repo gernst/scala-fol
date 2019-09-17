@@ -1,6 +1,17 @@
 package fol
 
 object Sugar {
+  class nullary(val fun: Fun) {
+    def unapply(pure: Expr) = pure match {
+      case App(`fun`, List()) => Some(())
+      case _ => None
+    }
+
+    def apply() = {
+      App(fun, List())
+    }
+  }
+
   class unary(val fun: Fun) {
     def unapply(pure: Expr) = pure match {
       case App(`fun`, List(arg)) => Some(arg)

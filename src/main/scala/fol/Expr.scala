@@ -78,19 +78,22 @@ object Const {
 
   def int(n: Int) = Const(n.toString, Sort.int)
   def bool(b: Boolean) = Const(b.toString, Sort.bool)
-  def nil(typ: Type.list) = App(Fun.nil(typ), Nil)
+
+  def nil(typ: Type.list) = new App(Fun.nil, Nil) {
+    assert(fun.args.isEmpty)
+    override val env = Type.instantiate(fun.ret, typ, Typing.empty)
+  }
 }
 
 case class Var(name: String, typ: Type, index: Option[Int] = None) extends Expr with Expr.x {
   def fresh(index: Int) = Var(name, typ, Some(index))
-  override def toString = name.toString
+  override def toString = name __ index
 }
 
 case class App(fun: Fun, args: List[Expr]) extends Expr {
   val env = Type.instantiate(fun.args, args map (_.typ), Typing.empty)
 
   def typ = fun.ret subst env
-
   def free = Set(args flatMap (_.free): _*)
   def rename(re: Ren) = App(fun, args map (_ rename re))
   def subst(su: Subst) = App(fun, args map (_ subst su))

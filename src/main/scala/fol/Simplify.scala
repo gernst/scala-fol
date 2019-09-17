@@ -2,11 +2,14 @@ package fol
 
 case class SimplificationFailure(reason: Any*) extends Error
 
+case class Rewrite(lhs: Expr, rhs: Expr, cond: Option[Expr] = None) {
+}
+
 object Simplify {
   val default = Simplify(Nil)
 
-  def simplify(expr: Expr, defs: List[Def.pure]): Expr = {
-    val self = Simplify(defs)
+  def simplify(expr: Expr, rw: List[Rewrite]): Expr = {
+    val self = Simplify(rw)
     self(expr)
   }
 }
@@ -41,7 +44,7 @@ object Context {
   val empty = Context(List.empty, Subst.empty)
 }
 
-case class Simplify(defs: List[Def.pure]) extends (Expr => Expr) {
+case class Simplify(rw: List[Rewrite]) extends (Expr => Expr) {
   def apply(phi: Expr): Expr = {
     try {
       simplify(phi, Context.empty)
@@ -101,10 +104,10 @@ case class Simplify(defs: List[Def.pure]) extends (Expr => Expr) {
       rewrite(phi, ctx)
   }
 
-  def rewrite(expr: App, ctx: Context, defs: List[Def.pure]): Expr = defs match {
+  def rewrite(expr: App, ctx: Context, rw: List[Rewrite]): Expr = rw match {
     case Nil =>
       expr
-    case Def.pure(pat, rhs, cond) :: rest =>
+    case Rewrite(pat, rhs, cond) :: rest =>
       bind(pat, expr, Subst.empty) match {
         case None =>
           rewrite(expr, ctx, rest)
@@ -129,21 +132,14 @@ case class Simplify(defs: List[Def.pure]) extends (Expr => Expr) {
     case x: Var =>
       x
 
-    /* case App(fun, args) if (defs contains fun) =>
-      val Def.pure(`fun`, xs, body) = defs(fun)
+    /* case App(fun, args) if (rw contains fun) =>
+      val Rewrite(`fun`, xs, body) = rw(fun)
       val su = Subst(xs, args)
       rewrite(body subst su, ctx) */
 
     case App(fun, args) =>
       val expr = App(fun, rewrite(args, ctx))
-      if (fun.name == Name._eq) {
-        args match {
-          case List(App(fun1, _), App(fun2, _)) if fun1.name == Name.cons && fun2.name == Name.cons =>
-            println(expr)
-          case _ =>
-        }
-      }
-      rewrite(expr, ctx, defs)
+      rewrite(expr, ctx, rw)
   }
 
   def literal(phi: Expr, ctx: Context): Expr = {

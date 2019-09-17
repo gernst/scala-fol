@@ -1,12 +1,6 @@
 
 
 package object fol {
-  object Def {
-    case class pure(lhs: Expr, rhs: Expr, cond: Option[Expr] = None) {
-      def axiom = All.close(lhs === rhs)
-    }
-  }
-
   type TRen = Map[Param, Param]
   
   type Typing = Map[Param, Type]
@@ -22,28 +16,6 @@ package object fol {
   val False = Const.bool(false)
 
   implicit def toConst(n: Int) = Const.int(n)
-  implicit def toName(text: String) = Name(text, None)
-
-  case class Name(text: String, index: Option[Int]) {
-    def prime = Name(text + "'", index)
-    def prefix(str: String) = Name(str + text, index)
-    override def toString = text __ index
-  }
-
-  object Name {
-    val _eq = "=="
-    val ite = "_?_:_"
-    val nil = "nil"
-    val _null = "null"
-    val cons = "cons"
-    val in = "in"
-    val head = "head"
-    val last = "last"
-    val tail = "tail"
-    val init = "init"
-    val select = "_[_]"
-    val store = "_[_:=_]"
-  }
 
   val sub = "₀₁₂₃₄₅₆₇₈₉"
   implicit class StringOps(self: String) {
@@ -75,7 +47,6 @@ package object fol {
   }
 
   implicit class SetOps[A](self: Set[A]) {
-    /** A∩B=∅*/
     def disjoint(that: Set[A]) = {
       (self & that).isEmpty
     }

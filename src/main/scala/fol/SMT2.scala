@@ -258,19 +258,19 @@ class SMT2(args: String*) extends Solver {
     case Expr.eqv(arg1, arg2) =>
       sexpr("=", smt(arg1), smt(arg2))
 
-    case App(Fun(Name.select, _, _, _), List(arg1, arg2)) =>
-      sexpr("select", smt(arg1), smt(arg2))
-    case App(Fun(Name.store, _, _, _), List(arg1, arg2, arg3)) =>
-      sexpr("store", smt(arg1), smt(arg2), smt(arg3))
-
-    case App(Fun(Name.nil, _, _, _), Nil) =>
+    case App(Fun.nil, List()) =>
       "nil"
-    case App(Fun(Name.cons, _, _, _), List(arg1, arg2)) =>
+    case Expr.cons(arg1, arg2) =>
       sexpr("insert", smt(arg1), smt(arg2))
-    case App(Fun(Name.head, _, _, _), List(arg)) =>
+    case Expr.head(arg) =>
       sexpr("head", smt(arg))
-    case App(Fun(Name.tail, _, _, _), List(arg)) =>
+    case Expr.tail(arg) =>
       sexpr("tail", smt(arg))
+
+    case Expr.select(arg1, arg2) =>
+      sexpr("select", smt(arg1), smt(arg2))
+    case Expr.store(arg1, arg2, arg3) =>
+      sexpr("store", smt(arg1), smt(arg2), smt(arg3))
 
     case App(fun, Nil) =>
       declare_fun(fun)

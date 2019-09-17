@@ -14,8 +14,7 @@ case class Fun(name: String, args: List[Type], ret: Type, fixity: Fixity = Nilfi
     //    case (_, List(Eq(arg1, arg2))) =>
     //      "(" + arg1 + " != " + arg2 + ")"
     case (Formfix, args) =>
-      assert(name.index == None)
-      name.text form args
+      name form args
     case (_: Prefix, List(arg)) =>
       this + " " + arg
     case (_: Postfix, List(arg)) =>
@@ -51,7 +50,7 @@ object Fun {
   val imp = Fun("==>", List(Sort.bool, Sort.bool), Sort.bool, Infix(Right, 2))
   val eqv = Fun("<=>", List(Sort.bool, Sort.bool), Sort.bool, Infix(Non, 1))
 
-  def nil(typ: Type.list) = Fun("nil", List(), typ)
+  val nil = Fun("nil", List(), Param.list)
   val cons = Fun("cons", List(Param.alpha, Param.list), Param.list)
   val in = Fun("in", List(Param.alpha, Param.list), Sort.bool)
   val head = Fun("in", List(Param.list), Param.alpha)
