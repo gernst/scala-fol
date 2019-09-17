@@ -76,54 +76,54 @@ sealed trait Expr extends Expr.term {
   def !==(that: Expr) = !(this === that)
 
   def ::(that: Expr) = {
-    val typ: Sort.list = this.typ.asInstanceOf[Sort.list]
+    val typ: Type.list = this.typ.asInstanceOf[Type.list]
     val fun = Fun.cons(typ)
     App(fun, List(that, this))
   }
 
   def in(that: Expr) = {
-    val typ: Sort.list = that.typ.asInstanceOf[Sort.list]
+    val typ: Type.list = that.typ.asInstanceOf[Type.list]
     val fun = Fun.in(typ)
     App(fun, List(this, that))
   }
 
   def head = {
-    val typ: Sort.list = this.typ.asInstanceOf[Sort.list]
+    val typ: Type.list = this.typ.asInstanceOf[Type.list]
     val fun = Fun.head(typ)
     App(fun, List(this))
   }
 
   def last = {
-    val typ: Sort.list = this.typ.asInstanceOf[Sort.list]
+    val typ: Type.list = this.typ.asInstanceOf[Type.list]
     val fun = Fun.last(typ)
     App(fun, List(this))
   }
 
   def init = {
-    val typ: Sort.list = this.typ.asInstanceOf[Sort.list]
+    val typ: Type.list = this.typ.asInstanceOf[Type.list]
     val fun = Fun.init(typ)
     App(fun, List(this))
   }
 
   def tail = {
-    val typ: Sort.list = this.typ.asInstanceOf[Sort.list]
+    val typ: Type.list = this.typ.asInstanceOf[Type.list]
     val fun = Fun.tail(typ)
     App(fun, List(this))
   }
 
   def isEmpty = {
-    val typ: Sort.list = this.typ.asInstanceOf[Sort.list]
+    val typ: Type.list = this.typ.asInstanceOf[Type.list]
     this === Const.nil(typ)
   }
 
   def select(index: Expr) = {
-    val typ: Sort.array = this.typ.asInstanceOf[Sort.array]
+    val typ: Type.array = this.typ.asInstanceOf[Type.array]
     val fun = Fun.select(typ)
     App(fun, List(this, index))
   }
 
   def store(index: Expr, arg: Expr) = {
-    val typ: Sort.array = this.typ.asInstanceOf[Sort.array]
+    val typ: Type.array = this.typ.asInstanceOf[Type.array]
     val fun = Fun.store(typ)
     App(fun, List(this, index, arg))
   }
@@ -259,7 +259,7 @@ object Const {
   def int(n: Int) = Const(n.toString, Sort.int)
   def bool(b: Boolean) = Const(b.toString, Sort.bool)
 
-  def nil(typ: Sort.list) = App(Fun.nil(typ), Nil)
+  def nil(typ: Type.list) = App(Fun.nil(typ), Nil)
 }
 
 case class Var(name: String, typ: Type, index: Option[Int] = None) extends Expr with Expr.x {
@@ -268,6 +268,8 @@ case class Var(name: String, typ: Type, index: Option[Int] = None) extends Expr 
 }
 
 case class App(fun: Fun, args: List[Expr]) extends Expr {
+  def typing = fun.args
+  
   assert(fun.args == args.map(_.typ), "ill-typed: " + this + ": " + fun.args + " vs " + args.map(_.typ))
   def typ = fun.ret
 

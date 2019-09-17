@@ -38,37 +38,37 @@ object Fun {
 
   //list functions
 
-  def nil(list: Sort.list) = {
+  def nil(list: Type.list) = {
     Fun(Name.nil, List(), list)
   }
 
-  def cons(list: Sort.list) = {
-    val Sort.list(elem) = list
+  def cons(list: Type.list) = {
+    val Type.list(elem) = list
     Fun(Name.cons, List(elem, list), list)
   }
 
-  def in(list: Sort.list) = {
-    val Sort.list(elem) = list
+  def in(list: Type.list) = {
+    val Type.list(elem) = list
     Fun(Name.in, List(elem, list), Sort.bool)
   }
 
-  def head(list: Sort.list) = {
-    val Sort.list(elem) = list
+  def head(list: Type.list) = {
+    val Type.list(elem) = list
     Fun(Name.head, List(list), elem, Nilfix)
   }
 
-  def last(list: Sort.list) = {
-    val Sort.list(elem) = list
+  def last(list: Type.list) = {
+    val Type.list(elem) = list
     Fun(Name.last, List(list), elem, Nilfix)
   }
 
-  def init(list: Sort.list) = {
-    val Sort.list(elem) = list
+  def init(list: Type.list) = {
+    val Type.list(elem) = list
     Fun(Name.init, List(list), list, Nilfix)
   }
 
-  def tail(list: Sort.list) = {
-    val Sort.list(elem) = list
+  def tail(list: Type.list) = {
+    val Type.list(elem) = list
     Fun(Name.tail, List(list), list, Nilfix)
   }
 
@@ -79,8 +79,8 @@ object Fun {
    * @param arr The Type of array for which to generate a select function
    * @return a select fuction arr -> dom -> ran
    */
-  def select(arr: Sort.array) = {
-    val Sort.array(dom, ran) = arr
+  def select(arr: Type.array) = {
+    val Type.array(dom, ran) = arr
     Fun(Name.select, List(arr, dom), ran, Formfix)
   }
 
@@ -89,8 +89,8 @@ object Fun {
    * @param arr The Type of array for which to generate a store function
    * @return a store fuction arr -> dom -> ran -> arr
    */
-  def store(arr: Sort.array) = {
-    val Sort.array(dom, ran) = arr
+  def store(arr: Type.array) = {
+    val Type.array(dom, ran) = arr
     Fun(Name.store, List(arr, dom, ran), arr, Formfix)
   }
 

@@ -6,8 +6,6 @@ sealed trait Type extends Type.term {
   def subst(ty: Typing): Type
 }
 
-object Type extends Alpha[Type, Param]
-
 case class Param(name: String, index: Option[Int]) extends Type with Type.x {
   def fresh(index: Int) = Param(name, Some(index))
   override def toString = "'" + name
@@ -33,7 +31,8 @@ case class Constr(fun: Fun, test: Fun, sels: List[Fun]) {
 object Sort {
   val bool = Sort("Bool")
   val int = Sort("Int")
-
+}
+object Type extends Alpha[Type, Param] {
   case class array(dom: Type, ran: Type) extends Type {
     def free = dom.free ++ ran.free
     def rename(re: TRen) = array(dom rename re, ran rename re)

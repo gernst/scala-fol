@@ -160,10 +160,10 @@ class SMT2(args: String*) extends Solver {
 
     case sort: Sort =>
       declare_sort(sort)
-    case Sort.list(elem) =>
+    case Type.list(elem) =>
       declare_typ(elem)
       declare_list()
-    case Sort.array(dom, ran) =>
+    case Type.array(dom, ran) =>
       declare_typ(dom)
       declare_typ(ran)
   }
@@ -189,10 +189,10 @@ class SMT2(args: String*) extends Solver {
     case sort @ Sort(name) =>
       declare_typ(typ)
       name
-    case Sort.list(elem) =>
+    case Type.list(elem) =>
       declare_list()
       sexpr("List", smt(elem))
-    case Sort.array(dom, ran) =>
+    case Type.array(dom, ran) =>
       declare_typ(dom)
       declare_typ(ran)
       sexpr("Array", smt(dom), smt(ran))
