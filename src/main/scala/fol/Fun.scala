@@ -9,8 +9,8 @@ case class Fun(name: String, args: List[Type], ret: Type, fixity: Fixity = Nilfi
   def format(arg: List[Any], prec: Int, assoc: Assoc): String = (fixity, args) match {
     case (Nilfix, Nil) =>
       toString
-    case (_, List(arg1, arg2)) if this == Pred._eq(Sort.bool) =>
-      "(" + arg1 + " <=> " + arg2 + ")"
+    // case (_, List(arg1, arg2)) if this == Pred._eq(Sort.bool) =>
+    //   "(" + arg1 + " <=> " + arg2 + ")"
     //    case (_, List(Eq(arg1, arg2))) =>
     //      "(" + arg1 + " != " + arg2 + ")"
     case (Formfix, args) =>
@@ -28,109 +28,38 @@ case class Fun(name: String, args: List[Type], ret: Type, fixity: Fixity = Nilfi
 }
 
 object Fun {
+  val ite = Fun("_?_:_", List(Sort.bool, Param.alpha, Param.alpha), Param.alpha, Formfix)
+
+  val exp = Fun("^", List(Sort.int, Sort.int), Sort.int, Infix(Left, 9))
+  val times = Fun("*", List(Sort.int, Sort.int), Sort.int, Infix(Left, 8))
+  val divBy = Fun("/", List(Sort.int, Sort.int), Sort.int, Infix(Non, 8))
+  val mod = Fun("%", List(Sort.int, Sort.int), Sort.int, Infix(Non, 8))
+
   val uminus = Fun("-", List(Sort.int), Sort.int, Prefix(8))
   val plus = Fun("+", List(Sort.int, Sort.int), Sort.int, Infix(Left, 7))
   val minus = Fun("-", List(Sort.int, Sort.int), Sort.int, Infix(Left, 7))
-  val times = Fun("*", List(Sort.int, Sort.int), Sort.int, Infix(Left, 8))
-  val exp = Fun("^", List(Sort.int, Sort.int), Sort.int, Infix(Left, 9))
-  lazy val divBy = Fun("/", List(Sort.int, Sort.int), Sort.int, Infix(Non, 8))
-  lazy val mod = Fun("%", List(Sort.int, Sort.int), Sort.int, Infix(Non, 8))
 
-  //list functions
+  val _eq = Fun("==", List(Param.alpha, Param.alpha), Sort.bool, Infix(Non, 6))
+  val le = Fun("<=", List(Sort.int, Sort.int), Sort.bool, Infix(Non, 6))
+  val lt = Fun("<", List(Sort.int, Sort.int), Sort.bool, Infix(Non, 6))
+  val ge = Fun(">=", List(Sort.int, Sort.int), Sort.bool, Infix(Non, 6))
+  val gt = Fun(">", List(Sort.int, Sort.int), Sort.bool, Infix(Non, 6))
 
-  def nil(list: Type.list) = {
-    Fun(Name.nil, List(), list)
-  }
+  val not = Fun("!", List(Sort.bool), Sort.bool, Prefix(5))
+  val and = Fun("&&", List(Sort.bool, Sort.bool), Sort.bool, Infix(Left, 4))
+  val or = Fun("||", List(Sort.bool, Sort.bool), Sort.bool, Infix(Left, 3))
+  val imp = Fun("==>", List(Sort.bool, Sort.bool), Sort.bool, Infix(Right, 2))
+  val eqv = Fun("<=>", List(Sort.bool, Sort.bool), Sort.bool, Infix(Non, 1))
 
-  def cons(list: Type.list) = {
-    val Type.list(elem) = list
-    Fun(Name.cons, List(elem, list), list)
-  }
+  def nil(typ: Type) = Fun("nil", List(), typ)
+  val cons = Fun("cons", List(Param.alpha, Param.list), Param.list)
+  val in = Fun("in", List(Param.alpha, Param.list), Sort.bool)
+  val head = Fun("in", List(Param.list), Param.alpha)
+  val tail = Fun("in", List(Param.list), Param.list)
+  val last = Fun("in", List(Param.list), Param.alpha)
+  val init = Fun("in", List(Param.list), Param.list)
 
-  def in(list: Type.list) = {
-    val Type.list(elem) = list
-    Fun(Name.in, List(elem, list), Sort.bool)
-  }
-
-  def head(list: Type.list) = {
-    val Type.list(elem) = list
-    Fun(Name.head, List(list), elem, Nilfix)
-  }
-
-  def last(list: Type.list) = {
-    val Type.list(elem) = list
-    Fun(Name.last, List(list), elem, Nilfix)
-  }
-
-  def init(list: Type.list) = {
-    val Type.list(elem) = list
-    Fun(Name.init, List(list), list, Nilfix)
-  }
-
-  def tail(list: Type.list) = {
-    val Type.list(elem) = list
-    Fun(Name.tail, List(list), list, Nilfix)
-  }
-
-  //Array type-functions
-
-  /**
-   * Function to generate a select function for any array type
-   * @param arr The Type of array for which to generate a select function
-   * @return a select fuction arr -> dom -> ran
-   */
-  def select(arr: Type.array) = {
-    val Type.array(dom, ran) = arr
-    Fun(Name.select, List(arr, dom), ran, Formfix)
-  }
-
-  /**
-   * Function to generate a store function for any array type
-   * @param arr The Type of array for which to generate a store function
-   * @return a store fuction arr -> dom -> ran -> arr
-   */
-  def store(arr: Type.array) = {
-    val Type.array(dom, ran) = arr
-    Fun(Name.store, List(arr, dom, ran), arr, Formfix)
-  }
-
-  def ite(typ: Type) = {
-    Fun(Name.ite, List(Sort.bool, typ, typ), typ, Formfix)
-  }
+  val select = Fun("_[_]", List(Param.array, Param.alpha), Param.beta, Formfix)
+  val store = Fun("_[_:=_]", List(Param.array, Param.alpha, Param.beta), Param.beta, Formfix)
 }
 
-/**
- * Predicate: total, boolean valued function
- */
-object Pred {
-  def apply(name: String, args: List[Type], fixity: Fixity = Nilfix): Fun = {
-    Fun(name, args, Sort.bool, fixity)
-  }
-
-  def unapply(fun: Fun) = fun match {
-    case Fun(name, args, Sort.bool, _) =>
-      Some((name, args))
-    case _ =>
-      None
-  }
-
-  val not = Pred("!", List(Sort.bool), Prefix(5))
-  val and = Pred("&&", List(Sort.bool, Sort.bool), Infix(Left, 4))
-  val or = Pred("||", List(Sort.bool, Sort.bool), Infix(Left, 3))
-  /** implies */
-  val imp = Pred("==>", List(Sort.bool, Sort.bool), Infix(Right, 2))
-  /** equivalent*/
-  val eqv = Pred("<=>", List(Sort.bool, Sort.bool), Infix(Non, 1))
-
-  val le = Pred("<=", List(Sort.int, Sort.int), Infix(Non, 6))
-  val lt = Pred("<", List(Sort.int, Sort.int), Infix(Non, 6))
-  val ge = Pred(">=", List(Sort.int, Sort.int), Infix(Non, 6))
-  val gt = Pred(">", List(Sort.int, Sort.int), Infix(Non, 6))
-
-  /**
-   * return an equality predicate for any type
-   */
-  def _eq(typ: Type) = {
-    Pred(Name._eq, List(typ, typ), Infix(Non, 6))
-  }
-}

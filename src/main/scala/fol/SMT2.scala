@@ -5,7 +5,7 @@ import java.io.InputStreamReader
 import java.io.PrintStream
 
 object SMT2 {
-  def z3(timeout: Int) = new SMT2("z3", "-T:" + timeout, "-in") {
+  def z3(timeout: Int) = new SMT2("z3", "-t:" + timeout, "-in") {
     override def declare_list() {} // Z3 has builtin lists
   }
 
@@ -79,7 +79,7 @@ class SMT2(args: String*) extends Solver {
         throw ProofUnknown(this)
     }
   }
-  
+
   def sexpr(arg0: String, args: String*) = {
     "(" + arg0 + " " + args.mkString(" ") + ")"
   }
@@ -217,23 +217,8 @@ class SMT2(args: String*) extends Solver {
     case Const(name, Sort.int) if name.toString forall (_.isDigit) =>
       name.toString
 
-    case Expr.not(arg) =>
-      sexpr("not", smt(arg))
-    case Expr.and(arg1, arg2) =>
-      sexpr("and", smt(arg1), smt(arg2))
-    case Expr.or(arg1, arg2) =>
-      sexpr("or", smt(arg1), smt(arg2))
-    case Expr.imp(arg1, arg2) =>
-      sexpr("=>", smt(arg1), smt(arg2))
-    case Expr.eqv(arg1, arg2) =>
-      sexpr("=", smt(arg1), smt(arg2))
-
-    case Expr.uminus(arg) =>
-      sexpr("-", smt(arg))
-    case Expr.plus(arg1, arg2) =>
-      sexpr("+", smt(arg1), smt(arg2))
-    case Expr.minus(arg1, arg2) =>
-      sexpr("-", smt(arg1), smt(arg2))
+    case Expr.ite(arg1, arg2, arg3) =>
+      sexpr("ite", smt(arg1), smt(arg2), smt(arg3))
 
     case Expr.times(arg1, arg2) =>
       sexpr("*", smt(arg1), smt(arg2))
@@ -244,6 +229,15 @@ class SMT2(args: String*) extends Solver {
     //    case Expr.exp(arg1, arg2) =>
     //      sexpr("exp", smt(arg1), smt(arg2))
 
+    case Expr.uminus(arg) =>
+      sexpr("-", smt(arg))
+    case Expr.plus(arg1, arg2) =>
+      sexpr("+", smt(arg1), smt(arg2))
+    case Expr.minus(arg1, arg2) =>
+      sexpr("-", smt(arg1), smt(arg2))
+
+    case Expr._eq(arg1, arg2) =>
+      sexpr("=", smt(arg1), smt(arg2))
     case Expr.lt(arg1, arg2) =>
       sexpr("<", smt(arg1), smt(arg2))
     case Expr.le(arg1, arg2) =>
@@ -253,10 +247,16 @@ class SMT2(args: String*) extends Solver {
     case Expr.ge(arg1, arg2) =>
       sexpr(">=", smt(arg1), smt(arg2))
 
-    case Eq(arg1, arg2) =>
+    case Expr.not(arg) =>
+      sexpr("not", smt(arg))
+    case Expr.and(arg1, arg2) =>
+      sexpr("and", smt(arg1), smt(arg2))
+    case Expr.or(arg1, arg2) =>
+      sexpr("or", smt(arg1), smt(arg2))
+    case Expr.imp(arg1, arg2) =>
+      sexpr("=>", smt(arg1), smt(arg2))
+    case Expr.eqv(arg1, arg2) =>
       sexpr("=", smt(arg1), smt(arg2))
-    case Ite(arg1, arg2, arg3) =>
-      sexpr("ite", smt(arg1), smt(arg2), smt(arg3))
 
     case App(Fun(Name.select, _, _, _), List(arg1, arg2)) =>
       sexpr("select", smt(arg1), smt(arg2))

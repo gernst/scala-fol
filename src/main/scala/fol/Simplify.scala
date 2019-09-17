@@ -84,7 +84,7 @@ case class Simplify(defs: List[Def.pure]) extends (Expr => Expr) {
       val (_phi, _psi) = binary(phi, true, psi, false, ctx)
       _phi ==> _psi
 
-    case Eq(left, right) =>
+    case Expr._eq(left, right) =>
       val _left = simplify(left, ctx)
       val _right = simplify(right, ctx)
       literal(_left === _right, ctx)
@@ -183,9 +183,9 @@ case class Simplify(defs: List[Def.pure]) extends (Expr => Expr) {
       assert(psi, ctx)
     case Expr.and(phi, psi) =>
       assume(phi, assume(psi, ctx))
-    case Eq(x: Var, e) if !(e.free contains x) =>
+    case Expr._eq(x: Var, e) if !(e.free contains x) =>
       ctx + (x -> e)
-    case Eq(e, x: Var) if !(e.free contains x) =>
+    case Expr._eq(e, x: Var) if !(e.free contains x) =>
       assume(x === e, ctx)
     case _ =>
       phi :: ctx
@@ -213,13 +213,13 @@ case class Simplify(defs: List[Def.pure]) extends (Expr => Expr) {
   }
 
   def prune(phi: Expr, q: Quant, bound: Set[Var], pos: Boolean): Expr = phi match {
-    case Eq(x: Var, e) if !(e.free contains x) && (bound contains x) =>
+    case Expr._eq(x: Var, e) if !(e.free contains x) && (bound contains x) =>
       if (pos && q == Ex || !pos && q == All) {
         True
       } else {
         phi
       }
-    case Eq(e, x: Var) if !(e.free contains x) =>
+    case Expr._eq(e, x: Var) if !(e.free contains x) =>
       prune(x === e, q, bound, pos)
     case Expr.not(psi) =>
       val _psi = prune(psi, q, bound, !pos)

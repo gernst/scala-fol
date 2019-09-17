@@ -18,8 +18,6 @@ class DummySolver extends Solver {
 }
 
 trait Solver {
-  // var stack: List[List[Expr]] = List(Nil)
-
   def assume(phi: Expr)
   def assumeDistinct(exprs: Iterable[Expr])
   def push()

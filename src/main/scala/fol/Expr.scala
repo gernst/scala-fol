@@ -1,158 +1,12 @@
 package fol
 
-sealed trait Expr extends Expr.term {
+sealed trait Expr extends Expr.term with Sugar.expr {
   def typ: Type
-
-  def unary_! = this match {
-    case True => False
-    case False => True
-    case Expr.not(phi) => phi
-    case _ => Expr.not(this)
-  }
-
-  def &&(that: Expr) = (this, that) match {
-    case (True, _) => that
-    case (False, _) => False
-    case (_, True) => this
-    case (_, False) => False
-    case _ => Expr.and(this, that)
-  }
-
-  def ||(that: Expr) = (this, that) match {
-    case (True, _) => True
-    case (False, _) => that
-    case (_, True) => True
-    case (_, False) => this
-    case _ => Expr.or(this, that)
-  }
-
-  def ==>(that: Expr): Expr = (this, that) match {
-    case (True, _) => that
-    case (False, _) => True
-    case (_, True) => True
-    case (_, False) => !this
-    case _ => Expr.imp(this, that)
-  }
-
-  def <=>(that: Expr) = (this, that) match {
-    case (True, _) => that
-    case (False, _) => !that
-    case (_, True) => this
-    case (_, False) => !this
-    case _ => Expr.eqv(this, that)
-  }
-
-  def unary_- = Expr.uminus(this)
-  def +(that: Expr) = Expr.plus(this, that)
-  def -(that: Expr) = Expr.minus(this, that)
-  def *(that: Expr) = Expr.times(this, that)
-  def /(that: Expr) = Expr.divBy(this, that)
-  def %(that: Expr) = Expr.mod(this, that)
-  def ^(that: Expr) = Expr.exp(this, that)
-
-  def <=(that: Expr) = Expr.le(this, that)
-  def <(that: Expr) = Expr.lt(this, that)
-  def >=(that: Expr) = Expr.ge(this, that)
-  def >(that: Expr) = Expr.gt(this, that)
-
-  def ===(that: Expr) = if (this == that) {
-    True
-  } else if (this.typ == Sort.bool && that.typ == Sort.bool) {
-    this <=> that
-  } else {
-    assert(this.typ == that.typ, "ill-typed: " + this + " == " + that)
-    val typed_equals = Pred._eq(typ)
-    App(typed_equals, List(this, that))
-  }
-
-  def ?(left: Expr, right: Expr) = this match {
-    case True => left
-    case False => right
-    case _ =>
-      App(Fun.ite(left.typ), List(this, left, right))
-  }
-
-  def !==(that: Expr) = !(this === that)
-
-  def ::(that: Expr) = {
-    val typ: Type.list = this.typ.asInstanceOf[Type.list]
-    val fun = Fun.cons(typ)
-    App(fun, List(that, this))
-  }
-
-  def in(that: Expr) = {
-    val typ: Type.list = that.typ.asInstanceOf[Type.list]
-    val fun = Fun.in(typ)
-    App(fun, List(this, that))
-  }
-
-  def head = {
-    val typ: Type.list = this.typ.asInstanceOf[Type.list]
-    val fun = Fun.head(typ)
-    App(fun, List(this))
-  }
-
-  def last = {
-    val typ: Type.list = this.typ.asInstanceOf[Type.list]
-    val fun = Fun.last(typ)
-    App(fun, List(this))
-  }
-
-  def init = {
-    val typ: Type.list = this.typ.asInstanceOf[Type.list]
-    val fun = Fun.init(typ)
-    App(fun, List(this))
-  }
-
-  def tail = {
-    val typ: Type.list = this.typ.asInstanceOf[Type.list]
-    val fun = Fun.tail(typ)
-    App(fun, List(this))
-  }
-
-  def isEmpty = {
-    val typ: Type.list = this.typ.asInstanceOf[Type.list]
-    this === Const.nil(typ)
-  }
-
-  def select(index: Expr) = {
-    val typ: Type.array = this.typ.asInstanceOf[Type.array]
-    val fun = Fun.select(typ)
-    App(fun, List(this, index))
-  }
-
-  def store(index: Expr, arg: Expr) = {
-    val typ: Type.array = this.typ.asInstanceOf[Type.array]
-    val fun = Fun.store(typ)
-    App(fun, List(this, index, arg))
-  }
-}
-
-object Eq {
-  def apply(l: Expr, r: Expr) = {
-    App(Pred._eq(l.typ), List(l, r))
-  }
-
-  def unapply(e: Expr) = e match {
-    case App(fun, List(arg1, arg2)) if fun.name == "==" =>
-      Some((arg1, arg2))
-    case App(Pred.eqv, List(arg1, arg2)) =>
-      Some((arg1, arg2))
-    case _ =>
-      None
-  }
-}
-
-object Ite {
-  def unapply(e: Expr) = e match {
-    case App(fun, List(arg1, arg2, arg3)) if fun.name == Name.ite =>
-      Some((arg1, arg2, arg3))
-    case _ =>
-      None
-  }
 }
 
 object Expr extends Alpha[Expr, Var] {
+  import Sugar._
+
   def and(xs: Iterable[Expr]): Expr = {
     if (xs.isEmpty) True
     else xs reduce (_ && _)
@@ -176,71 +30,38 @@ object Expr extends Alpha[Expr, Var] {
     and(zs)
   }
 
-  class unary(val fun: Fun) {
-    def unapply(pure: Expr) = pure match {
-      case App(`fun`, List(arg)) => Some(arg)
-      case _ => None
-    }
+  object ite extends ternary(Fun.ite)
 
-    def apply(arg: Expr) = {
-      App(fun, List(arg))
-    }
-  }
-
-  class binary(val fun: Fun) {
-    def unapply(pure: Expr) = pure match {
-      case App(`fun`, List(arg1, arg2)) => Some((arg1, arg2))
-      case _ => None
-    }
-
-    def apply(arg1: Expr, arg2: Expr) = {
-      App(fun, List(arg1, arg2))
-    }
-
-    def flatten(expr: Expr): List[Expr] = expr match {
-      case App(`fun`, List(arg1, arg2)) =>
-        flatten(arg1) ++ flatten(arg2)
-      case _ =>
-        List(expr)
-    }
-  }
-
-  class ternary(val fun: Fun) {
-    def unapply(pure: Expr) = pure match {
-      case App(`fun`, List(arg1, arg2, arg3)) => Some((arg1, arg2, arg3))
-      case _ => None
-    }
-
-    def apply(arg1: Expr, arg2: Expr, arg3: Expr): Expr = {
-      App(fun, List(arg1, arg2, arg3))
-    }
-  }
-
-  // object _eq extends binary(Pred.eq)
-
-  object not extends unary(Pred.not)
-  object and extends binary(Pred.and)
-  object or extends binary(Pred.or)
-  object imp extends binary(Pred.imp)
-  object eqv extends binary(Pred.eqv)
+  object exp extends binary(Fun.exp)
+  object times extends binary(Fun.times)
+  object divBy extends binary(Fun.divBy)
+  object mod extends binary(Fun.mod)
 
   object uminus extends unary(Fun.uminus)
   object plus extends binary(Fun.plus)
   object minus extends binary(Fun.minus)
-  object times extends binary(Fun.times)
-  object divBy extends binary(Fun.divBy)
-  object mod extends binary(Fun.mod)
-  object exp extends binary(Fun.exp)
 
-  object lt extends binary(Pred.lt)
-  object le extends binary(Pred.le)
-  object gt extends binary(Pred.gt)
-  object ge extends binary(Pred.ge)
+  object _eq extends binary(Fun._eq)
+  object lt extends binary(Fun.lt)
+  object le extends binary(Fun.le)
+  object gt extends binary(Fun.gt)
+  object ge extends binary(Fun.ge)
 
-  // object question extends ternary("?:")
+  object not extends unary(Fun.not)
+  object and extends binary(Fun.and)
+  object or extends binary(Fun.or)
+  object imp extends binary(Fun.imp)
+  object eqv extends binary(Fun.eqv)
 
-  // object array_select extends binary("select")
-  // object array_store extends ternary("update")
+  object cons extends binary(Fun.cons)
+  object in extends binary(Fun.in)
+  object head extends unary(Fun.head)
+  object tail extends unary(Fun.tail)
+  object last extends unary(Fun.last)
+  object init extends unary(Fun.init)
+
+  object select extends binary(Fun.select)
+  object store extends ternary(Fun.store)
 }
 
 object Const {
@@ -257,7 +78,6 @@ object Const {
 
   def int(n: Int) = Const(n.toString, Sort.int)
   def bool(b: Boolean) = Const(b.toString, Sort.bool)
-
   def nil(typ: Type.list) = App(Fun.nil(typ), Nil)
 }
 
