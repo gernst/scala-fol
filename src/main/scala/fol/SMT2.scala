@@ -280,7 +280,7 @@ class SMT2(args: String*) extends Solver {
       declare_fun(fun)
       sexpr(fun.toString, args map smt: _*)
 
-    case Bind(q, bound, body, trigger) =>
+    case Bind(q, bound, body) =>
       sexpr(q.toString, sexpr(bound map bind), smt(body))
   }
 }

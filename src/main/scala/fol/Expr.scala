@@ -1,6 +1,5 @@
 package fol
 
-
 sealed trait Expr extends Expr.term {
   def typ: Type
 
@@ -268,10 +267,9 @@ case class Var(name: String, typ: Type, index: Option[Int] = None) extends Expr 
 }
 
 case class App(fun: Fun, args: List[Expr]) extends Expr {
-  def typing = fun.args
-  
-  assert(fun.args == args.map(_.typ), "ill-typed: " + this + ": " + fun.args + " vs " + args.map(_.typ))
-  def typ = fun.ret
+  val env = Type.instantiate(fun.args, args map (_.typ), Typing.empty)
+
+  def typ = fun.ret subst env
 
   def free = Set(args flatMap (_.free): _*)
   def rename(re: Ren) = App(fun, args map (_ rename re))
@@ -281,25 +279,24 @@ case class App(fun: Fun, args: List[Expr]) extends Expr {
 }
 
 sealed trait Quant {
-  /** Bind all free variables in ϕ*/
   def close(body: Expr, trigger: Set[Expr] = Set()): Expr = {
     val xs = body.free
     if (xs.isEmpty) body
-    else Bind(this, xs, body, trigger)
+    else Bind(this, xs, body)
   }
 
-  def apply(bound: Iterable[Var], body: Expr, trigger: Set[Expr] = Set()): Expr = {
-    apply(bound.toSet, body, trigger)
+  def apply(bound: Iterable[Var], body: Expr): Expr = {
+    apply(bound.toSet, body)
   }
 
-  def apply(bound: Set[Var], body: Expr, trigger: Set[Expr]): Expr = {
+  def apply(bound: Set[Var], body: Expr): Expr = {
     val xs = bound & body.free
     if (xs.isEmpty) body
     else body match {
-      case Bind(q, ys, body, trigger_) if q == this =>
-        Bind(this, xs ++ ys, body, trigger ++ trigger_)
+      case Bind(q, ys, body) if q == this =>
+        Bind(this, xs ++ ys, body)
       case _ =>
-        Bind(this, xs, body, trigger)
+        Bind(this, xs, body)
     }
   }
 }
@@ -312,7 +309,7 @@ case object Ex extends Quant {
   override def toString = "exists"
 }
 
-case class Bind(quant: Quant, bound: Set[Var], body: Expr, trigger: Set[Expr]) extends Expr with Expr.bind {
+case class Bind(quant: Quant, bound: Set[Var], body: Expr) extends Expr with Expr.bind {
   assert(!bound.isEmpty)
   assert(body.typ == Sort.bool)
   def typ = Sort.bool
@@ -324,11 +321,11 @@ case class Bind(quant: Quant, bound: Set[Var], body: Expr, trigger: Set[Expr]) e
   }
 
   def rename(a: Ren, re: Ren) = {
-    Bind(quant, bound map (_ rename a), body rename re, trigger map (_ rename re))
+    Bind(quant, bound map (_ rename a), body rename re)
   }
 
   def subst(a: Ren, su: Subst) = {
-    Bind(quant, bound map (_ rename a), body subst su, trigger map (_ subst su))
+    Bind(quant, bound map (_ rename a), body subst su)
   }
 
   override def toString = {

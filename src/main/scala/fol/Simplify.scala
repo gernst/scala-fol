@@ -89,7 +89,7 @@ case class Simplify(defs: List[Def.pure]) extends (Expr => Expr) {
       val _right = simplify(right, ctx)
       literal(_left === _right, ctx)
 
-    case Bind(q, xs, body, trigger) =>
+    case Bind(q, xs, body) =>
       val _body = simplify(body, ctx) // XXX: assumes that ctx does not extend over free variables of body
       val __body = prune(_body, q, xs, true)
       q(xs, __body)
