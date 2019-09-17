@@ -79,9 +79,9 @@ object Const {
   def int(n: Int) = Const(n.toString, Sort.int)
   def bool(b: Boolean) = Const(b.toString, Sort.bool)
 
-  def nil(typ: Type.list) = new App(Fun.nil, Nil) {
+  def nil(inst: Type.list) = new App(Fun.nil, Nil) {
     assert(fun.args.isEmpty)
-    override val env = Type.instantiate(fun.ret, typ, Typing.empty)
+    override val env = Type.instantiate(fun.ret, inst, Typing.empty)
   }
 }
 
