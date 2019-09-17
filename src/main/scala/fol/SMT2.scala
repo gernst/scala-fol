@@ -1,9 +1,8 @@
 package fol
 
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.io.PrintStream
-import java.io.BufferedOutputStream
-import java.io.OutputStream
-import scala.io.Source
 
 object SMT2 {
   def z3(timeout: Int) = new SMT2("z3", "-T:" + timeout, "-in") {
@@ -24,6 +23,12 @@ class SMT2(args: String*) extends Solver {
     def cmds = rcmds.reverse
   }
 
+  val pb = new ProcessBuilder(args: _*)
+  val pr = pb.start()
+  val stdout = new BufferedReader(new InputStreamReader(pr.getInputStream))
+  val stderr = pr.getErrorStream
+  val stdin = new PrintStream(pr.getOutputStream)
+
   object State {
     val empty = State(Set(), Set(), Set(), List())
   }
@@ -31,12 +36,30 @@ class SMT2(args: String*) extends Solver {
   var stack = List(State.empty)
   def state = stack.head
 
+  command("set-option", ":print-success", "true")
+  command("set-option", ":produce-assertions", "true")
+  command("set-logic", "ALL")
+
+  def write(line: String) {
+    // println("SMT > " + line)
+    stdin.println(line)
+    stdin.flush()
+  }
+
+  def read(): String = {
+    val line = stdout.readLine.trim
+    // println("SMT < " + line)
+    line
+  }
+
   def push() = {
     stack = state.copy() :: stack
+    command("push")
   }
 
   def pop() = {
     stack = stack.tail
+    command("pop")
   }
 
   override def toString() = {
@@ -44,43 +67,19 @@ class SMT2(args: String*) extends Solver {
   }
 
   def isConsistent: Boolean = {
-    val pb = new ProcessBuilder(args: _*)
-    val pr = pb.start()
-    val stdout = pr.getInputStream
-    val stderr = pr.getErrorStream
-    val stdin = new PrintStream(pr.getOutputStream)
+    write("(check-sat)")
+    val out = read()
 
-    for (cmd <- state.cmds) {
-      stdin.append(cmd)
-    }
-
-    stdin.append("(check-sat)")
-    stdin.flush()
-    stdin.close() // EOF
-
-    val out = Source.fromInputStream(stdout).mkString
-    val err = Source.fromInputStream(stdout).mkString
-
-    pr.waitFor()
-    val exit = pr.exitValue
-    if (exit != 0) {
-      throw ProofError(exit, out, err)
-    }
-
-    if (out == null) {
-      throw ProofError(err)
-    } else {
-      out.trim match {
-        case "sat" =>
-          true
-        case "unsat" =>
-          false
-        case _ =>
-          throw ProofUnknown(this)
-      }
+    out match {
+      case "sat" =>
+        true
+      case "unsat" =>
+        false
+      case _ =>
+        throw ProofUnknown(this)
     }
   }
-
+  
   def sexpr(arg0: String, args: String*) = {
     "(" + arg0 + " " + args.mkString(" ") + ")"
   }
@@ -109,19 +108,20 @@ class SMT2(args: String*) extends Solver {
     val cmd = line.toString
     state.rcmds = cmd :: state.rcmds
 
-    cmd
+    write(cmd)
+
+    if (!pr.isAlive)
+      throw ProofError(cmd, pr.exitValue)
+
+    val out = read()
+    if (out != "success") {
+      println(this)
+      throw ProofError(cmd, out)
+    }
   }
 
   def declare_sort(sort: Sort) {
     val Sort(name) = sort
-    if (!(state.sorts contains name)) {
-      state.sorts += name
-      command("declare-sort", name, "0")
-    }
-  }
-
-  def declare_pointer() {
-    val name = "Pointer"
     if (!(state.sorts contains name)) {
       state.sorts += name
       command("declare-sort", name, "0")
@@ -166,9 +166,6 @@ class SMT2(args: String*) extends Solver {
     case Sort.array(dom, ran) =>
       declare_typ(dom)
       declare_typ(ran)
-    case Sort.pointer(elem) =>
-      declare_typ(elem)
-      declare_pointer()
   }
 
   def assumeDistinct(exprs: Iterable[Expr]) = {
@@ -199,21 +196,18 @@ class SMT2(args: String*) extends Solver {
       declare_typ(dom)
       declare_typ(ran)
       sexpr("Array", smt(dom), smt(ran))
-    case Sort.pointer(elem) =>
-      declare_typ(typ)
-      "Pointer"
   }
 
   def bind(x: Var) = {
-    val Var(name, typ) = x
+    val Var(name, typ, index) = x
     sexpr(smt(x), smt(typ))
   }
 
   def smt(expr: Expr): String = expr match {
-    case Var(Name(name, None), typ) =>
+    case Var(name, typ, None) =>
       declare_var(name, typ)
       name
-    case Var(Name(name, Some(index)), typ) =>
+    case Var(name, typ, Some(index)) =>
       declare_var(name + index, typ)
       name + index
     case True =>
@@ -264,18 +258,18 @@ class SMT2(args: String*) extends Solver {
     case Ite(arg1, arg2, arg3) =>
       sexpr("ite", smt(arg1), smt(arg2), smt(arg3))
 
-    case App(Fun.total(Name.select, _, _, _), List(arg1, arg2)) =>
+    case App(Fun(Name.select, _, _, _), List(arg1, arg2)) =>
       sexpr("select", smt(arg1), smt(arg2))
-    case App(Fun.total(Name.store, _, _, _), List(arg1, arg2, arg3)) =>
+    case App(Fun(Name.store, _, _, _), List(arg1, arg2, arg3)) =>
       sexpr("store", smt(arg1), smt(arg2), smt(arg3))
 
-    case App(Fun.total(Name.nil, _, typ, _), Nil) =>
+    case App(Fun(Name.nil, _, _, _), Nil) =>
       "nil"
-    case App(Fun.total(Name.cons, _, typ, _), List(arg1, arg2)) =>
+    case App(Fun(Name.cons, _, _, _), List(arg1, arg2)) =>
       sexpr("insert", smt(arg1), smt(arg2))
-    case App(Fun.partial(Name.head, List(Var(_, typ)), _, _, _), List(arg)) =>
+    case App(Fun(Name.head, _, _, _), List(arg)) =>
       sexpr("head", smt(arg))
-    case App(Fun.partial(Name.tail, List(Var(_, typ)), _, _, _), List(arg)) =>
+    case App(Fun(Name.tail, _, _, _), List(arg)) =>
       sexpr("tail", smt(arg))
 
     case App(fun, Nil) =>

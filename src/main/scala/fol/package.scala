@@ -7,9 +7,16 @@ package object fol {
     }
   }
 
+  type TRen = Map[Param, Param]
+  
   type Typing = Map[Param, Type]
+  object Typing { val empty: Typing = Map() }
+
   type Ren = Map[Var, Var]
+  object Ren { val empty: Ren = Map() }
+
   type Subst = Map[Var, Expr]
+  object Subst { val empty: Subst = Map() }
 
   val True = Const.bool(true)
   val False = Const.bool(false)
@@ -24,18 +31,18 @@ package object fol {
   }
 
   object Name {
-    val _eq: Name = "=="
-    val ite: Name = "_?_:_"
-    val nil: Name = "nil"
-    val _null: Name = "null"
-    val cons: Name = "cons"
-    val in: Name = "in"
-    val head: Name = "head"
-    val last: Name = "last"
-    val tail: Name = "tail"
-    val init: Name = "init"
-    val select: Name = "_[_]"
-    val store: Name = "_[_:=_]"
+    val _eq = "=="
+    val ite = "_?_:_"
+    val nil = "nil"
+    val _null = "null"
+    val cons = "cons"
+    val in = "in"
+    val head = "head"
+    val last = "last"
+    val tail = "tail"
+    val init = "init"
+    val select = "_[_]"
+    val store = "_[_:=_]"
   }
 
   val sub = "₀₁₂₃₄₅₆₇₈₉"
