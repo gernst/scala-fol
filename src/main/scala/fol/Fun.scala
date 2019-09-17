@@ -6,7 +6,7 @@ case class Fun(name: String, args: List[Type], ret: Type, fixity: Fixity = Nilfi
   override def toString = name.toString
 
   // TODO: add parens only when necessary
-  def format(arg: List[Any], prec: Int, assoc: Assoc): String = (fixity, args) match {
+  def format(args: List[Any], prec: Int, assoc: Assoc): String = (fixity, args) match {
     case (Nilfix, Nil) =>
       toString
     // case (_, List(arg1, arg2)) if this == Pred._eq(Sort.bool) =>
@@ -51,7 +51,7 @@ object Fun {
   val imp = Fun("==>", List(Sort.bool, Sort.bool), Sort.bool, Infix(Right, 2))
   val eqv = Fun("<=>", List(Sort.bool, Sort.bool), Sort.bool, Infix(Non, 1))
 
-  def nil(typ: Type) = Fun("nil", List(), typ)
+  def nil(typ: Type.list) = Fun("nil", List(), typ)
   val cons = Fun("cons", List(Param.alpha, Param.list), Param.list)
   val in = Fun("in", List(Param.alpha, Param.list), Sort.bool)
   val head = Fun("in", List(Param.list), Param.alpha)

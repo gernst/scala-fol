@@ -112,7 +112,7 @@ object Sugar {
       case _ => Expr.eqv(this, that)
     }
 
-    def isEmpty = typ match {
+    def isNil = typ match {
       case typ: Type.list => this === Const.nil(typ)
     }
 
