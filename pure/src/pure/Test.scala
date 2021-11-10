@@ -30,13 +30,37 @@ object Test {
   )
 
   def main(args: Array[String]) {
-    val xs = sig.formal("xs", list_int)
-    val ys = sig.formal("ys", list_bool)
-    val zs = sig.formal("zs", list_a)
-    val vars = Map("xs" -> xs, "ys" -> ys, "zs" -> zs)
+    println(univ)
+    println(sig)
 
-    val su0 = Map[Param, Type]()
-    val Typed(expr1, typ1, su1) = sig.app("=", List(xs, zs))(vars, su0)
-    val Typed(expr2, typ2, su2) = sig.app("=", List(ys, zs))(vars, su1)
+    {
+      val xs = sig.formal("xs", list_int)
+      val ys = sig.formal("ys", list_bool)
+      val zs = sig.formal("zs", list_a)
+      val vars = Map("xs" -> xs, "ys" -> ys, "zs" -> zs)
+
+      val su = Map[Param, Type]()
+      val (nil, su0) = sig.const("nil")(vars, su)
+      val (expr1, su1) = sig.app("=", List(xs, zs))(vars, su0)
+      val (expr2, su2) = sig.app("=", List(nil, zs))(vars, su1)
+
+      println(expr1 inst su2)
+      println(expr2 inst su2)
+    }
+
+    {
+      object check extends Check(sig)
+      object check_ extends Check(sig)
+
+      val xs = check.x("xs", list_int)
+      val ys = check.x("ys", list_bool)
+      val zs = check.x("zs", list_a)
+
+      val nil = check.const("nil")
+      val expr1 = check.app("=", List(xs, zs))
+      val expr2 = check.app("=", List(nil, zs))
+      println(expr1.resolve)
+      println(expr2.resolve)
+    }
   }
 }

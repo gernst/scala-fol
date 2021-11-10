@@ -35,6 +35,23 @@ case class Fun(name: String, params: List[Param], args: List[Type], res: Type) {
     val re = Type.fresh(params)
     Inst(this, args rename re, res rename re)
   }
+
+  def paramsToString =
+    params.mkString("forall ", ", ", ". ")
+    
+  def argsToString =
+    args.mkString(" * ") + " -> "
+
+  override def toString = (params, args) match {
+    case (Nil, Nil) =>
+      name + ": " + res
+    case (Nil, _) =>
+      name + ": " + argsToString + res
+    case (_, Nil) =>
+      name + ": " + paramsToString + res
+    case _ =>
+      name + ": " + paramsToString + argsToString + res
+  }
 }
 
 case class Inst(fun: Fun, args: List[Type], res: Type) {
