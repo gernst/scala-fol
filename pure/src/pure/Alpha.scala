@@ -1,4 +1,4 @@
-package fol
+package pure
 
 object Alpha {
   trait term[E, V <: E] {
@@ -6,6 +6,11 @@ object Alpha {
     def free: Set[V]
     def rename(re: Map[V, V]): E
     def subst(su: Map[V, E]): E
+
+    def subst(v: V, e: E): E = {
+      val su = Map(v -> e)
+      subst(su)
+    }
   }
 
   trait x[E, V <: E] extends term[E, V] {
@@ -23,29 +28,44 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
   type term = Alpha.term[E, V]
   type x = Alpha.x[E, V]
 
-  trait bind extends term {
-    this: E =>
+  trait bind[A] {
     def bound: Set[V]
 
-    def rename(a: Map[V, V], re: Map[V, V]): E
-    def subst(a: Map[V, V], su: Map[V, E]): E
+    def rename(a: Map[V, V], re: Map[V, V]): A
+    def subst(a: Map[V, V], su: Map[V, E]): A
 
     def avoid(xs: Set[V]) = {
       val captured = bound & xs
       context.fresh(captured)
     }
 
-    def rename(re: Map[V, V]) = {
+    def refresh = {
+      val xs = bound
+      val alpha = avoid(xs)
+      rename(alpha, alpha)
+    }
+
+    def rename(re: Map[V, V]): A = {
       val xs = context.free(re)
       val alpha = avoid(xs)
       rename(alpha, re -- bound ++ alpha)
     }
 
-    def subst(su: Map[V, E]) = {
+    def subst(su: Map[V, E]): A = {
       val xs = context.free(su)
       val alpha = avoid(xs)
       subst(alpha, su -- bound ++ alpha)
     }
+  }
+
+  class xs(xs: List[V]) {
+    def rename(re: Map[V, V]) = xs map (_ rename re)
+  }
+
+  class terms(es: List[E]) {
+    def free = Set(es flatMap (_.free): _*)
+    def rename(re: Map[V, V]) = es map (_ rename re)
+    def subst(su: Map[V, E]) = es map (_ subst su)
   }
 
   var _index = 0
@@ -58,6 +78,10 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
   def id(xs: Iterable[V]): Map[V, V] = {
     val ys = xs map (x => (x, x))
     ys.toMap
+  }
+
+  def fresh(x: V) = {
+    x fresh nextIndex
   }
 
   def fresh(xs: Iterable[V]): Map[V, V] = {
@@ -79,14 +103,14 @@ trait Alpha[E <: Alpha.term[E, V], V <: E with Alpha.x[E, V]] {
   }
 
   def subst[B <: E](xs: Iterable[V], ys: Iterable[B]): Map[V, B] = {
-    assert(xs.size == ys.size)
+    require(xs.size == ys.size, "length mismatch")
     val zs = (xs zip ys)
     zs.toMap
   }
 
-  def compose(inner: Subst, outer: Subst) = {
-    val updated = inner map {
-      case (x, e) => (x, e subst outer)
+  def compose(inner: Map[V, E], outer: Map[V, E]) = {
+    val updated = inner map { case (x, e) =>
+      (x, e subst outer)
     }
     updated ++ outer
   }
